@@ -199,16 +199,3 @@ from the local record sequence.
   to reproduce the original file byte for byte.
 - The package focuses on common local GenBank location expressions and does not
   download sequence data referenced by remote accessions.
-
-## Development
-
-Regenerate documentation and check the package with:
-
-```r
-roxygen2::roxygenise()
-devtools::check()
-```
-
-## License
-
-GPL (>= 3)
