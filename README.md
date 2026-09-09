@@ -9,8 +9,7 @@ provides a data-frame interface for working with feature annotations.
 Install the development version from GitHub:
 
 ```r
-# install.packages("remotes")
-remotes::install_github("Close-your-eyes/gbkr")
+pak::pak("Close-your-eyes/gbkr")
 ```
 
 To install a local checkout instead:
