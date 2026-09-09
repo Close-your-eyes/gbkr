@@ -1,4 +1,4 @@
-#' Convert GenBank features to a wide, character-only data frame.
+#' Convert GenBank Features to a Data Frame
 #'
 #' There is one row per feature. `type`, `location`, and every qualifier are
 #' ordinary character columns. Missing qualifiers are `NA`. A flag qualifier
@@ -8,12 +8,36 @@
 #' Quotation information is retained as a data-frame attribute, so an unchanged
 #' table can be converted back without altering quoted versus unquoted values.
 #'
-#' @param x A `gbk_record`, a one-record `gbk_file`, or a feature list.
-#' @param repeated_sep Separator for repeated qualifier values. A newline keeps
-#'   the representation unambiguous while remaining an ordinary character cell.
-#' @param flag_value Text used for a qualifier that has no value.
+#' @param x A `gbk_record`, a one-record `gbk_file`, or a parsed feature list.
+#' @param repeated_sep A non-empty character string used to separate repeated
+#'   qualifier values in a single cell. The default newline keeps repeated
+#'   values distinguishable while retaining an ordinary character column.
+#' @param flag_value A single character string used to represent a qualifier
+#'   that has no value, such as `/pseudo`.
 #'
-#' @return A `gbk_feature_df` containing only character columns.
+#' @return A `gbk_feature_df`, inheriting from `data.frame`, with character
+#'   columns only. Attributes retain repeated-value, flag, and quotation
+#'   metadata for [features_from_df()].
+#'
+#' @seealso [features_from_df()], [add_gbk_feature()]
+#' @export
+#'
+#' @examples
+#' features <- list(
+#'   list(
+#'     type = "CDS",
+#'     location = "1..6",
+#'     qualifiers = list(
+#'       list(name = "gene", value = "abc", quoted = TRUE),
+#'       list(name = "note", value = "first", quoted = TRUE),
+#'       list(name = "note", value = "second", quoted = TRUE),
+#'       list(name = "pseudo", value = NULL, quoted = FALSE)
+#'     )
+#'   )
+#' )
+#'
+#' feature_df <- features_to_df(features)
+#' feature_df
 features_to_df <- function(x, repeated_sep = "\n", flag_value = "<flag>") {
   if (!is.character(repeated_sep) || length(repeated_sep) != 1L ||
       !nzchar(repeated_sep)) {
@@ -60,7 +84,7 @@ features_to_df <- function(x, repeated_sep = "\n", flag_value = "<flag>") {
     vapply(feature$qualifiers, function(q) q$name, character(1L))
   }), use.names = FALSE))
 
-  quoted_metadata <- setNames(vector("list", length(qualifier_names)),
+  quoted_metadata <- stats::setNames(vector("list", length(qualifier_names)),
                               qualifier_names)
   for (qualifier_name in qualifier_names) {
     quoted_cells <- vector("list", length(features))
@@ -88,18 +112,43 @@ features_to_df <- function(x, repeated_sep = "\n", flag_value = "<flag>") {
   structure(out, class = c("gbk_feature_df", "data.frame"))
 }
 
-#' Convert a feature data frame back to the GenBank feature-list structure.
+#' Convert a Feature Data Frame to GenBank Features
 #'
 #' Besides tables returned by `features_to_df()`, ordinary data frames work too.
 #' All qualifier columns are coerced to character. `NA` means absent,
 #' `flag_value` means a flag, and `repeated_sep` separates repeated values.
 #'
-#' @param x A data frame containing `type`, `location`, and optional qualifiers.
-#' @param repeated_sep Separator used for repeated qualifier values. By default,
-#'   use the value recorded by `features_to_df()`, or a newline.
-#' @param flag_value Text representing a flag qualifier. By default, use the
-#'   value recorded by `features_to_df()`, or `<flag>`.
-#' @return A list suitable for assignment to `record$features`.
+#' @details
+#' When `x` was created by [features_to_df()], stored metadata preserves whether
+#' each qualifier value was quoted. For an ordinary data frame, conventional
+#' GenBank quotation rules are applied automatically.
+#'
+#' @param x A data frame containing character-coercible `type` and `location`
+#'   columns followed by zero or more qualifier columns.
+#' @param repeated_sep A non-empty character string separating repeated
+#'   qualifier values. `NULL` uses the value recorded by [features_to_df()], or
+#'   a newline if no value was recorded.
+#' @param flag_value A single character string representing a flag qualifier.
+#'   `NULL` uses the value recorded by [features_to_df()], or `"<flag>"` if no
+#'   value was recorded.
+#'
+#' @return A parsed feature list suitable for assignment to
+#'   `record$features`.
+#'
+#' @seealso [features_to_df()], [add_gbk_feature()]
+#' @export
+#'
+#' @examples
+#' feature_df <- data.frame(
+#'   type = c("gene", "CDS"),
+#'   location = c("1..6", "1..6"),
+#'   gene = c("abc", "abc"),
+#'   pseudo = c(NA, "<flag>"),
+#'   stringsAsFactors = FALSE
+#' )
+#'
+#' features <- features_from_df(feature_df)
+#' features[[2]]$qualifiers
 features_from_df <- function(x, repeated_sep = NULL, flag_value = NULL) {
   if (!is.data.frame(x)) stop("x must be a data frame.", call. = FALSE)
   if (is.null(repeated_sep)) {
@@ -163,18 +212,49 @@ features_from_df <- function(x, repeated_sep = NULL, flag_value = NULL) {
   })
 }
 
-#' Append one feature to a wide feature data frame.
+#' Append a GenBank Feature to a Data Frame
 #'
 #' Qualifiers are supplied through `...`. Use a vector to add a repeated
 #' qualifier, and use `NULL` for a flag qualifier. Override automatic quotation
 #' with a named `.quoted` vector, for example `.quoted = c(label = FALSE)`.
 #'
-#' @param x A feature data frame.
-#' @param type Feature key such as `CDS`, `promoter`, or `misc_feature`.
-#' @param location GenBank location expression such as `10..50`.
-#' @param ... Named qualifier values.
-#' @param .quoted Optional named logical vector controlling quotation.
-#' @return The updated `gbk_feature_df`.
+#' @param x A feature data frame containing `type` and `location` columns,
+#'   typically returned by [features_to_df()].
+#' @param type A single feature key, such as `"CDS"`, `"promoter"`, or
+#'   `"misc_feature"`.
+#' @param location A single GenBank location expression, such as `"10..50"` or
+#'   `"complement(10..50)"`.
+#' @param ... Named qualifier values. A vector creates a repeated qualifier,
+#'   `NULL` creates a flag qualifier, and omitted qualifiers are recorded as
+#'   missing.
+#' @param .quoted An optional logical value or named logical vector controlling
+#'   whether qualifier values are quoted when written. An unnamed scalar applies
+#'   to every supplied qualifier; names target individual qualifiers.
+#'
+#' @return The updated data frame as a `gbk_feature_df`. Existing rows and
+#'   quotation metadata are retained.
+#'
+#' @seealso [features_to_df()], [features_from_df()]
+#' @export
+#'
+#' @examples
+#' feature_df <- data.frame(
+#'   type = "source",
+#'   location = "1..100",
+#'   organism = "synthetic construct",
+#'   stringsAsFactors = FALSE
+#' )
+#'
+#' feature_df <- add_gbk_feature(
+#'   feature_df,
+#'   type = "CDS",
+#'   location = "10..60",
+#'   gene = "exampleA",
+#'   note = c("predicted", "reviewed"),
+#'   pseudo = NULL
+#' )
+#' feature_df
+#' features_from_df(feature_df)
 add_gbk_feature <- function(x, type, location, ..., .quoted = NULL) {
   if (!is.data.frame(x)) stop("x must be a data frame.", call. = FALSE)
   if (!all(c("type", "location") %in% names(x))) {
@@ -211,6 +291,7 @@ add_gbk_feature <- function(x, type, location, ..., .quoted = NULL) {
   }
 
   new_row <- nrow(x) + 1L
+  x[new_row, ] <- NA_character_
   x$type[[new_row]] <- as.character(type)
   x$location[[new_row]] <- as.character(location)
   all_qualifiers <- setdiff(names(x), core)

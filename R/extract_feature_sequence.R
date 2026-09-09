@@ -1,9 +1,37 @@
-#' Extract the sequence for one GenBank feature.
+#' Extract the Sequence of One GenBank Feature
 #'
-#' @param record A `gbk_record` containing the source sequence.
-#' @param feature A feature list, a one-row feature data frame, or a location
-#'   string.
-#' @return One character string in the orientation specified by the location.
+#' Extract the bases described by a GenBank location expression. Complemented
+#' locations are returned as reverse complements, and joined locations are
+#' concatenated in the order given by the expression.
+#'
+#' @details
+#' Supported location syntax includes single positions, ranges, fuzzy bounds
+#' marked with `<` or `>`, `join()`, `order()`, `complement()`, and descending
+#' ranges that cross the origin of a circular record.
+#'
+#' @param record A `gbk_record` containing a non-empty `sequence` component and
+#'   locus topology information when circular locations are used.
+#' @param feature A parsed feature list, a one-row feature data frame containing
+#'   a `location` column, or a single GenBank location string.
+#'
+#' @return A single character string in the orientation specified by the
+#'   feature location.
+#'
+#' @seealso [extract_feature_sequences()], [features_to_df()]
+#' @export
+#'
+#' @examples
+#' record <- structure(
+#'   list(
+#'     locus = list(topology = "linear"),
+#'     features = list(),
+#'     sequence = "aaccttgg"
+#'   ),
+#'   class = c("gbk_record", "list")
+#' )
+#'
+#' extract_feature_sequence(record, "2..5")
+#' extract_feature_sequence(record, "complement(2..5)")
 extract_feature_sequence <- function(record, feature) {
   if (is.null(record$sequence)) {
     stop("record must contain a sequence.", call. = FALSE)
@@ -28,18 +56,50 @@ extract_feature_sequence <- function(record, feature) {
   .gbk_extract_location(sequence, location, circular)
 }
 
-#' Extract sequences for several GenBank features.
+#' Extract Sequences for Several GenBank Features
 #'
 #' Supports ranges, fuzzy range bounds (`<` and `>`), `join()`, `order()`,
 #' `complement()`, and descending ranges on circular records. Returned names use
 #' the first available `label`, `gene`, or `locus_tag`, with a type/index
 #' fallback.
 #'
-#' @param record A `gbk_record` containing the source sequence.
-#' @param features A feature list or feature data frame.
-#' @param name_by Qualifiers to try, in order, when naming the result.
-#' @param use_names Whether to attach useful, unique names.
-#' @return A character vector aligned with `features`.
+#' @param record A `gbk_record` containing a non-empty `sequence` component.
+#' @param features A parsed feature list or a feature data frame. Defaults to all
+#'   features in `record`.
+#' @param name_by A character vector of qualifier names to try, in order, when
+#'   naming the returned sequences.
+#' @param use_names A logical value indicating whether to attach unique names to
+#'   the result.
+#'
+#' @return A character vector with one sequence per input feature, in the same
+#'   order. If `use_names` is `TRUE`, the vector has unique names.
+#'
+#' @seealso [extract_feature_sequence()], [features_to_df()]
+#' @export
+#'
+#' @examples
+#' features <- list(
+#'   list(
+#'     type = "gene",
+#'     location = "1..4",
+#'     qualifiers = list(list(name = "gene", value = "alpha", quoted = TRUE))
+#'   ),
+#'   list(
+#'     type = "CDS",
+#'     location = "complement(5..8)",
+#'     qualifiers = list(list(name = "locus_tag", value = "cds_1", quoted = TRUE))
+#'   )
+#' )
+#' record <- structure(
+#'   list(
+#'     locus = list(topology = "linear"),
+#'     features = features,
+#'     sequence = "aaccttgg"
+#'   ),
+#'   class = c("gbk_record", "list")
+#' )
+#'
+#' extract_feature_sequences(record)
 extract_feature_sequences <- function(
     record,
     features = record$features,

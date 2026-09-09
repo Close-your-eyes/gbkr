@@ -54,13 +54,13 @@
   )
 
   rest <- if (length(fields) > 3L) fields[-seq_len(3L)] else character()
-  if (length(rest) && grepl("^[0-9]{2}-[A-Za-z]{3}-[0-9]{4}$", tail(rest, 1L))) {
-    ans$date <- tail(rest, 1L)
-    rest <- head(rest, -1L)
+  if (length(rest) && grepl("^[0-9]{2}-[A-Za-z]{3}-[0-9]{4}$", utils::tail(rest, 1L))) {
+    ans$date <- utils::tail(rest, 1L)
+    rest <- utils::head(rest, -1L)
   }
-  if (length(rest) && grepl("^[A-Za-z]{3}$", tail(rest, 1L))) {
-    ans$division <- tail(rest, 1L)
-    rest <- head(rest, -1L)
+  if (length(rest) && grepl("^[A-Za-z]{3}$", utils::tail(rest, 1L))) {
+    ans$division <- utils::tail(rest, 1L)
+    rest <- utils::head(rest, -1L)
   }
   topo_at <- which(tolower(rest) %in% c("linear", "circular"))
   if (length(topo_at)) {
@@ -217,22 +217,6 @@
   !is.null(value) && !(name %in% .gbk_unquoted_qualifiers)
 }
 
-print.gbk_feature_df <- function(x, ...) {
-  display <- x
-  class(display) <- "data.frame"
-  qualifier_names <- setdiff(names(display), c("type", "location"))
-  repeated_sep <- attr(x, "gbk_repeated_sep", exact = TRUE)
-  if (is.null(repeated_sep)) repeated_sep <- "\n"
-  for (qualifier_name in qualifier_names) {
-    display[[qualifier_name]] <- vapply(display[[qualifier_name]], function(cell) {
-      if (is.na(cell)) return(NA_character_)
-      value <- gsub(repeated_sep, " | ", as.character(cell), fixed = TRUE)
-      if (nchar(value) > 60L) paste0(substr(value, 1L, 57L), "...") else value
-    }, character(1L))
-  }
-  print.data.frame(display, ...)
-  invisible(x)
-}
 
 .gbk_reverse_complement <- function(sequence) {
   complemented <- chartr(
