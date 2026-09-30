@@ -179,12 +179,33 @@ Supported location syntax includes:
 Remote-accession locations, such as `J00194.1:100..200`, cannot be extracted
 from the local record sequence.
 
+## Reverse-complement a GenBank file
+
+Reverse the entire DNA sequence and update feature coordinates and strands:
+
+```r
+reversed <- reverse_complement_gbk("input.gbk")
+write_gbk(reversed, "reverse_complement.gbk")
+```
+
+You can also pass an object returned by `read_gbk()`, a single record, or a list
+of records. The input is left unchanged. Each feature still describes the same
+biological sequence, including joined features and features across a circular
+origin. Feature order and translations are retained.
+
+The function supports IUPAC DNA bases and the local location syntax listed
+above. It also updates LEFT/RIGHT direction qualifiers and coordinates in
+`transl_except`, `anticodon`, and `rpt_unit_range` qualifiers. Unsupported or
+remote-accession locations produce an error. Coordinates embedded in free-text
+notes or headers are not rewritten.
+
 ## Main functions
 
 | Function | Purpose |
 | --- | --- |
 | `read_gbk()` | Read one or more GenBank records |
 | `write_gbk()` | Write records in GenBank flat-file format |
+| `reverse_complement_gbk()` | Reverse-complement DNA and remap feature locations |
 | `features_to_df()` | Convert parsed features to a wide data frame |
 | `features_from_df()` | Convert a feature data frame back to parsed features |
 | `add_gbk_feature()` | Append a feature and its qualifiers |

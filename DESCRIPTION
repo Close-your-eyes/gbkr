@@ -1,7 +1,7 @@
 Package: gbkr
 Type: Package
 Title: Work with genebank (gbk) files
-Version: 0.1.1
+Version: 0.1.2
 Authors@R:
     person(given = "Christopher Mark",
            family = "Skopnik",
@@ -10,6 +10,10 @@ Authors@R:
            comment = c(ORCID = "0000-0002-6089-4769"))
 Description: Add or edit features via data frames.
 License: GPL (>= 3)
+Imports:
+  dplyr,
+  purrr,
+  rlang
 Encoding: UTF-8
 LazyData: true
 Config/roxygen2/version: 8.1.0
